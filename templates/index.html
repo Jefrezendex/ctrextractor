@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Gerador de PDFs (Render)</title>
+<style>
+body{font-family:Arial,Helvetica,sans-serif;background:#0b1220;color:#e6eef6;padding:24px}
+.wrap{max-width:920px;margin:0 auto;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:18px}
+textarea{width:100%;height:180px;padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
+.btn{background:#06b6d4;color:#021526;padding:10px 14px;border-radius:8px;border:none;cursor:pointer}
+.progress-bar{position:relative;height:18px;background:rgba(255,255,255,0.04);border-radius:12px;overflow:hidden}
+.progress-fill{height:100%;width:0;background:linear-gradient(90deg,#06b6d4,#7dd3fc);border-radius:12px;transition:width 400ms linear}
+.truck{position:relative;left:0;transition:left 350ms linear;font-size:28px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h2>Gerador de PDFs (Render)</h2>
+<label>IDs (um por linha)</label>
+<textarea id="ids" placeholder="30181592
+12345
+67890"></textarea>
+<div style="margin-top:10px">
+  <button class="btn" id="start">Iniciar</button>
+</div>
+<div id="progress" style="display:none;margin-top:18px">
+  <div class="progress-bar"><div class="progress-fill" id="fill"></div></div>
+  <div style="margin-top:8px;display:flex;align-items:center;gap:12px">
+    <div class="truck" id="truck">🚚</div>
+    <div id="status">Aguardando</div>
+  </div>
+  <a id="dl" class="btn" style="display:none" target="_blank">Baixar ZIP</a>
+</div>
+</div>
+<script>
+const startBtn = document.getElementById('start');
+const fill = document.getElementById('fill');
+const truck = document.getElementById('truck');
+const status = document.getElementById('status');
+const dl = document.getElementById('dl');
+function setProgress(p){ fill.style.width = p + '%'; const track=300; truck.style.left = Math.round((track*p)/100)+'px'; if(p>=100) truck.style.opacity=0; else truck.style.opacity=1; }
+async function start(){ const raw=document.getElementById('ids').value.trim(); if(!raw){alert('cole ao menos um id');return;} const ids=raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean); document.getElementById('progress').style.display='block'; status.textContent='Enviando...'; try{ const resp=await fetch('/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids})}); const data=await resp.json(); const jobId=data.jobId; status.textContent='Processando...'; const iv=setInterval(async ()=>{ const r=await fetch('/status/'+encodeURIComponent(jobId)); const j=await r.json(); setProgress(j.progress||0); status.textContent=j.status||'processing'; if(j.status==='done'){ clearInterval(iv); dl.href='/download/'+jobId; dl.style.display='inline-block'; status.textContent='Concluído'; setProgress(100);} if(j.status==='error'){ clearInterval(iv); status.textContent='Erro'; } },1500); }catch(e){ alert('erro: '+e.message);} }
+startBtn.addEventListener('click', start);
+</script>
+</body>
+</html>

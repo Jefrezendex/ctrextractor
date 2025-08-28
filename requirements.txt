@@ -1,0 +1,5 @@
+flask
+pdfkit
+PyPDF2
+beautifulsoup4
+gunicorn
